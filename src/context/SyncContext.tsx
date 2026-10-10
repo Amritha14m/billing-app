@@ -27,7 +27,9 @@ export const SyncProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLastSyncTime(state.lastSyncTime);
       setMessage(state.message);
     });
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const triggerSync = async () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { SyncProvider } from './context/SyncContext';
 import { AppLayout } from './components/layout/AppLayout';
@@ -27,7 +27,7 @@ export function App() {
   return (
     <AuthProvider>
       <SyncProvider>
-        <BrowserRouter>
+        <HashRouter>
           <Routes>
             {/* Standalone Auth & Onboarding */}
             <Route path="/login" element={<Login />} />
@@ -56,7 +56,7 @@ export function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </SyncProvider>
     </AuthProvider>
   );

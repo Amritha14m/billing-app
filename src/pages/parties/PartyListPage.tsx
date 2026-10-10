@@ -134,7 +134,7 @@ export const PartyListPage: React.FC = () => {
       type,
       phone: phone.trim(),
       email: email.trim(),
-      contactPerson: contactPerson.trim(),
+      contact_person: contactPerson.trim(),
       billing_address: billingAddress.trim(),
       state: stateObj?.name || 'Maharashtra',
       state_code: stateCode,

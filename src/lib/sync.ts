@@ -47,7 +47,9 @@ class SyncManager {
   public subscribe(listener: SyncListener) {
     this.listeners.add(listener);
     this.notify();
-    return () => this.listeners.delete(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   private async notify(message?: string) {

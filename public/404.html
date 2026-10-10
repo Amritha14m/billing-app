@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BizLedger</title>
+    <script>
+      // Single Page Apps for GitHub Pages with HashRouter
+      // Redirect direct path requests to the hash route
+      const repoBase = '/billing-app';
+      let pathname = window.location.pathname;
+      if (pathname.startsWith(repoBase)) {
+        pathname = pathname.slice(repoBase.length);
+      }
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      window.location.replace(repoBase + '/#' + pathname + search + hash);
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to BizLedger...</p>
+  </body>
+</html>
