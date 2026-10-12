@@ -147,7 +147,7 @@ Output:
   ✓ PASS: IGST amount should be 0
   ✓ PASS: Total amount should be 10620 (9000 + 1620)
   ...
-Test Summary: 19 Passed, 0 Failed.
+Test Summary: 42 Passed, 0 Failed.
 ```
 
 ---
@@ -188,7 +188,7 @@ The generated, installable Android debug APK is located at:
 ```
 bizledger/android/app/build/outputs/apk/debug/app-debug.apk
 ```
-File size: **~4.48 MB**. This file can be directly installed on any Android device via `adb install` or transferred via USB/cloud storage.
+File size: **~4.82 MB**. This file is signed with the Android debug certificate and can be directly installed on any Android device via `adb install` or transferred via USB/cloud storage.
 
 ---
 
