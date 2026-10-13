@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:web": "tsc -b && vite build && node scripts/bundle-web-zip.js",
+    "bundle:zip": "node scripts/bundle-web-zip.js",
     "lint": "oxlint",
     "preview": "vite preview"
   },

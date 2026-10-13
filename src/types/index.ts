@@ -282,3 +282,27 @@ export interface DashboardMetrics {
   lowStockCount: number;
   overduePaymentsCount: number;
 }
+
+export interface PartyReminder {
+  id: string;
+  business_id: string;
+  party_id: string;
+  party_name?: string;
+  reminder_date: string;
+  amount: number;
+  message: string;
+  channel: 'whatsapp' | 'sms' | 'share';
+  created_at: string;
+}
+
+export interface AuditLog {
+  id: string;
+  business_id: string;
+  user_id?: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  details?: any;
+  created_at: string;
+}
+

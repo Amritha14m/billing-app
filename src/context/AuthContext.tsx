@@ -1,4 +1,4 @@
-// Auth & Multi-Business Context for BizLedger
+// Auth, Multi-Business & App Security Context for BizLedger
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Business, UserRole } from '../types';
 import {
@@ -16,31 +16,72 @@ import {
 } from '../lib/mockData';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
+export interface UserSession {
+  id: string;
+  phone?: string;
+  email?: string;
+  name: string;
+}
+
 interface AuthContextType {
-  user: { id: string; email: string; name: string } | null;
+  user: UserSession | null;
   role: UserRole;
   businesses: Business[];
   activeBusiness: Business | null;
   isLoading: boolean;
+  isOnboardingCompleted: boolean;
+  isLocked: boolean;
+  hasPin: boolean;
   setActiveBusiness: (business: Business) => void;
   createBusiness: (data: Partial<Business>) => Promise<Business>;
   updateActiveBusiness: (data: Partial<Business>) => Promise<void>;
   logout: () => Promise<void>;
   loginAsDemo: () => void;
+  loginWithPhoneOtp: (phone: string) => Promise<{ success: boolean; message?: string; isTestMode?: boolean }>;
+  verifyPhoneOtp: (phone: string, otp: string) => Promise<{ success: boolean; message?: string }>;
+  loginWithEmail: (email: string) => void;
+  completeOnboarding: () => void;
+  unlockApp: (pin: string) => boolean;
+  setAppPin: (pin: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<{ id: string; email: string; name: string } | null>({
-    id: 'usr_demo_001',
-    email: 'admin@bizledger.app',
-    name: 'Business Owner',
+  const [user, setUser] = useState<UserSession | null>(() => {
+    const saved = localStorage.getItem('bizledger_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // fallback
+      }
+    }
+    // Default demo user for seamless start
+    return {
+      id: 'usr_owner_001',
+      phone: '+919876543210',
+      name: 'Business Owner',
+    };
   });
+
   const [role, setRole] = useState<UserRole>('owner');
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [activeBusiness, setActiveBusinessState] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Onboarding & App Lock
+  const [isOnboardingCompleted, setIsOnboardingCompleted] = useState<boolean>(() => {
+    return localStorage.getItem('bizledger_onboarding_completed') === 'true';
+  });
+
+  const [hasPin, setHasPin] = useState<boolean>(() => {
+    return Boolean(localStorage.getItem('bizledger_app_lock_pin'));
+  });
+
+  const [isLocked, setIsLocked] = useState<boolean>(() => {
+    return Boolean(localStorage.getItem('bizledger_app_lock_pin'));
+  });
 
   // Initialize and seed local database if empty
   useEffect(() => {
@@ -139,20 +180,154 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setBusinesses((prev) => prev.map((b) => (b.id === updatedBiz.id ? updatedBiz : b)));
   };
 
+  const completeOnboarding = () => {
+    setIsOnboardingCompleted(true);
+    localStorage.setItem('bizledger_onboarding_completed', 'true');
+  };
+
   const logout = async () => {
     if (isSupabaseConfigured()) {
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // ignore
+      }
     }
     setUser(null);
+    localStorage.removeItem('bizledger_user');
   };
 
   const loginAsDemo = () => {
-    setUser({
+    const demoUser: UserSession = {
       id: 'usr_demo_001',
       email: 'admin@bizledger.app',
       name: 'Business Owner',
-    });
+    };
+    setUser(demoUser);
+    localStorage.setItem('bizledger_user', JSON.stringify(demoUser));
     setRole('owner');
+  };
+
+  const loginWithEmail = (email: string) => {
+    const emailUser: UserSession = {
+      id: `usr_${Date.now()}`,
+      email,
+      name: email.split('@')[0] || 'Business User',
+    };
+    setUser(emailUser);
+    localStorage.setItem('bizledger_user', JSON.stringify(emailUser));
+    setRole('owner');
+  };
+
+  const loginWithPhoneOtp = async (
+    phone: string
+  ): Promise<{ success: boolean; message?: string; isTestMode?: boolean }> => {
+    // Check if development test number (+919999999999 or 9999999999)
+    const cleanDigits = phone.replace(/\D/g, '');
+    const isDevNumber = cleanDigits.endsWith('9999999999');
+
+    if (isDevNumber) {
+      return {
+        success: true,
+        message: 'Dev test number detected. Use fixed OTP: 123456',
+        isTestMode: true,
+      };
+    }
+
+    if (!isSupabaseConfigured()) {
+      return {
+        success: false,
+        message:
+          'SMS provider not configured on Supabase backend. Please configure Twilio or MSG91 in Supabase Auth Settings, or use Email / Dev Test number (+91 9999999999).',
+      };
+    }
+
+    try {
+      const fullPhone = cleanDigits.startsWith('91') ? `+${cleanDigits}` : `+91${cleanDigits}`;
+      const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
+      if (error) {
+        return { success: false, message: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err?.message || 'Failed to send OTP via SMS provider',
+      };
+    }
+  };
+
+  const verifyPhoneOtp = async (
+    phone: string,
+    otp: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    const cleanDigits = phone.replace(/\D/g, '');
+    const isDevNumber = cleanDigits.endsWith('9999999999');
+
+    // Dev test number verification
+    if (isDevNumber) {
+      if (otp === '123456') {
+        const phoneUser: UserSession = {
+          id: `usr_phone_${cleanDigits}`,
+          phone: `+91${cleanDigits.slice(-10)}`,
+          name: 'Business Owner',
+        };
+        setUser(phoneUser);
+        localStorage.setItem('bizledger_user', JSON.stringify(phoneUser));
+        return { success: true };
+      }
+      return { success: false, message: 'Invalid test OTP. Please enter 123456.' };
+    }
+
+    if (!isSupabaseConfigured()) {
+      return {
+        success: false,
+        message: 'SMS provider not configured on Supabase backend.',
+      };
+    }
+
+    try {
+      const fullPhone = cleanDigits.startsWith('91') ? `+${cleanDigits}` : `+91${cleanDigits}`;
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: fullPhone,
+        token: otp,
+        type: 'sms',
+      });
+      if (error) {
+        return { success: false, message: error.message };
+      }
+      const phoneUser: UserSession = {
+        id: data.user?.id || `usr_phone_${cleanDigits}`,
+        phone: fullPhone,
+        name: 'Business Owner',
+      };
+      setUser(phoneUser);
+      localStorage.setItem('bizledger_user', JSON.stringify(phoneUser));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'OTP verification failed' };
+    }
+  };
+
+  const unlockApp = (pin: string): boolean => {
+    const savedPin = localStorage.getItem('bizledger_app_lock_pin');
+    if (!savedPin || savedPin === pin) {
+      setIsLocked(false);
+      return true;
+    }
+    return false;
+  };
+
+  const setAppPin = (pin: string | null) => {
+    if (pin) {
+      localStorage.setItem('bizledger_app_lock_pin', pin);
+      setHasPin(true);
+      setIsLocked(false);
+    } else {
+      localStorage.removeItem('bizledger_app_lock_pin');
+      setHasPin(false);
+      setIsLocked(false);
+    }
   };
 
   return (
@@ -163,11 +338,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         businesses,
         activeBusiness,
         isLoading,
+        isOnboardingCompleted,
+        isLocked,
+        hasPin,
         setActiveBusiness,
         createBusiness,
         updateActiveBusiness,
         logout,
         loginAsDemo,
+        loginWithPhoneOtp,
+        verifyPhoneOtp,
+        loginWithEmail,
+        completeOnboarding,
+        unlockApp,
+        setAppPin,
       }}
     >
       {children}

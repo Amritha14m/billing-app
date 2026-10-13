@@ -75,19 +75,56 @@ export function formatCurrency(amount: number | null | undefined): string {
 }
 
 // Validate GSTIN pattern (2 digits state code + 10 alphanumeric PAN + 1 entity + Z + 1 check digit)
-export function validateGSTIN(gstin: string): { isValid: boolean; message?: string } {
+// Optionally validates that the state code prefix matches expectedStateCode
+export function validateGSTIN(
+  gstin: string,
+  expectedStateCode?: string
+): { isValid: boolean; message?: string } {
   if (!gstin) return { isValid: true };
   const clean = gstin.trim().toUpperCase();
   const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-  
+
   if (!gstinRegex.test(clean)) {
     return {
       isValid: false,
       message: 'Format should be 2-digit state code + PAN + 1 + Z + check digit (e.g., 27AAAAA0000A1Z5)',
     };
   }
+
+  if (expectedStateCode) {
+    const padded = expectedStateCode.padStart(2, '0');
+    const gstinPrefix = clean.substring(0, 2);
+    if (gstinPrefix !== padded) {
+      return {
+        isValid: false,
+        message: `GSTIN state code (${gstinPrefix}) does not match selected state code (${padded})`,
+      };
+    }
+  }
+
   return { isValid: true };
 }
+
+// Validate Indian Mobile Number (10 digits, starts with 6, 7, 8, or 9)
+export function validateIndianPhone(phone: string): { isValid: boolean; message?: string } {
+  if (!phone) {
+    return { isValid: false, message: 'Mobile number is required' };
+  }
+  const digits = phone.replace(/\D/g, '');
+  const mobile = digits.length === 12 && digits.startsWith('91') ? digits.substring(2) : digits;
+
+  if (mobile.length !== 10) {
+    return { isValid: false, message: 'Mobile number must be exactly 10 digits' };
+  }
+  if (!/^[6-9]/.test(mobile)) {
+    return { isValid: false, message: 'Indian mobile numbers must start with 6, 7, 8, or 9' };
+  }
+  if (!/^[6-9]\d{9}$/.test(mobile)) {
+    return { isValid: false, message: 'Invalid mobile number format' };
+  }
+  return { isValid: true };
+}
+
 
 export interface LineCalculationInput {
   quantity: number;

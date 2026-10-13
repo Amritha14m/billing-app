@@ -12,6 +12,8 @@ import {
   Expense,
   OtherIncome,
   SyncQueueItem,
+  PartyReminder,
+  AuditLog,
 } from '../types';
 
 interface BizLedgerDB extends DBSchema {
@@ -73,10 +75,20 @@ interface BizLedgerDB extends DBSchema {
     key: string;
     value: { key: string; value: any };
   };
+  party_reminders: {
+    key: string;
+    value: PartyReminder;
+    indexes: { 'by-business': string; 'by-party': string };
+  };
+  audit_logs: {
+    key: string;
+    value: AuditLog;
+    indexes: { 'by-business': string };
+  };
 }
 
 const DB_NAME = 'bizledger_offline_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<BizLedgerDB>> | null = null;
 
@@ -148,6 +160,17 @@ export function getDB(): Promise<IDBPDatabase<BizLedgerDB>> {
         // Key-value settings
         if (!db.objectStoreNames.contains('settings')) {
           db.createObjectStore('settings', { keyPath: 'key' });
+        }
+        // Party reminders
+        if (!db.objectStoreNames.contains('party_reminders')) {
+          const store = db.createObjectStore('party_reminders', { keyPath: 'id' });
+          store.createIndex('by-business', 'business_id');
+          store.createIndex('by-party', 'party_id');
+        }
+        // Audit logs
+        if (!db.objectStoreNames.contains('audit_logs')) {
+          const store = db.createObjectStore('audit_logs', { keyPath: 'id' });
+          store.createIndex('by-business', 'business_id');
         }
       },
     });
@@ -319,3 +342,30 @@ export async function updateSyncQueueItem(item: SyncQueueItem): Promise<void> {
   const db = await getDB();
   await db.put('sync_queue', item);
 }
+
+// Party Reminders
+export async function getLocalPartyReminders(businessId: string): Promise<PartyReminder[]> {
+  const db = await getDB();
+  const all = await db.getAllFromIndex('party_reminders', 'by-business', businessId);
+  return all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+export async function saveLocalPartyReminder(reminder: PartyReminder): Promise<void> {
+  const db = await getDB();
+  await db.put('party_reminders', reminder);
+  await queueSyncOperation(reminder.business_id, 'party_reminders', 'insert', reminder.id, reminder);
+}
+
+// Audit Logs
+export async function getLocalAuditLogs(businessId: string): Promise<AuditLog[]> {
+  const db = await getDB();
+  const all = await db.getAllFromIndex('audit_logs', 'by-business', businessId);
+  return all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+export async function saveLocalAuditLog(log: AuditLog): Promise<void> {
+  const db = await getDB();
+  await db.put('audit_logs', log);
+  await queueSyncOperation(log.business_id, 'audit_logs', 'insert', log.id, log);
+}
+

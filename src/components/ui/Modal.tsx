@@ -8,6 +8,7 @@ interface ModalProps {
   description?: string;
   children: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl';
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -17,7 +18,9 @@ export const Modal: React.FC<ModalProps> = ({
   description,
   children,
   maxWidth = 'lg',
+  size,
 }) => {
+  const effectiveMaxWidth = size || maxWidth;
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -54,7 +57,7 @@ export const Modal: React.FC<ModalProps> = ({
 
         {/* Modal dialog box */}
         <div
-          className={`relative transform overflow-hidden rounded-t-2xl sm:rounded-2xl bg-white text-left shadow-2xl transition-all w-full ${maxWidthClasses[maxWidth]} my-0 sm:my-8 max-h-[90vh] flex flex-col z-10`}
+          className={`relative transform overflow-hidden rounded-t-2xl sm:rounded-2xl bg-white text-left shadow-2xl transition-all w-full ${maxWidthClasses[effectiveMaxWidth]} my-0 sm:my-8 max-h-[90vh] flex flex-col z-10`}
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">

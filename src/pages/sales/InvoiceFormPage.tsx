@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Trash2,
@@ -86,14 +86,56 @@ export const InvoiceFormPage: React.FC = () => {
   const [newPartyGstin, setNewPartyGstin] = useState('');
   const [newPartyState, setNewPartyState] = useState(activeBusiness?.state_code || '27');
 
+  const [searchParams] = useSearchParams();
+
   // Load existing parties and items
   useEffect(() => {
     if (!activeBusiness) return;
-    getLocalParties(activeBusiness.id).then(setParties);
+    getLocalParties(activeBusiness.id).then((pts) => {
+      setParties(pts);
+      const paramPartyId = searchParams.get('partyId');
+      if (paramPartyId) {
+        const p = pts.find((pt) => pt.id === paramPartyId);
+        if (p) setSelectedParty(p);
+      }
+    });
+
     getLocalItems(activeBusiness.id).then((itms) => {
       setItems(itms);
-      // Auto-add an initial empty line if creating new
-      if (lines.length === 0 && itms.length > 0) {
+      const quickAmt = parseFloat(searchParams.get('quickAmount') || '0');
+      if (quickAmt > 0 && lines.length === 0) {
+        const isInter = (selectedParty?.state_code || activeBusiness.state_code) !== activeBusiness.state_code;
+        const calc = calculateLineItem({
+          quantity: 1,
+          unitPrice: quickAmt,
+          taxRate: activeBusiness.gst_registered ? 18 : 0,
+          isTaxInclusive: Boolean(activeBusiness.gst_registered),
+          isGstInvoice: Boolean(activeBusiness.gst_registered),
+          isInterState: isInter,
+        });
+        setLines([
+          {
+            id: `line_custom_${Date.now()}`,
+            item_id: 'item_quick_sale',
+            item_name: 'Sale',
+            unit: 'PCS',
+            quantity: 1,
+            unit_price: quickAmt,
+            discount_percent: 0,
+            discount_amount: 0,
+            tax_rate: activeBusiness.gst_registered ? 18 : 0,
+            taxable_amount: calc.taxableAmount,
+            cgst_rate: calc.cgstRate,
+            cgst_amount: calc.cgstAmount,
+            sgst_rate: calc.sgstRate,
+            sgst_amount: calc.sgstAmount,
+            igst_rate: calc.igstRate,
+            igst_amount: calc.igstAmount,
+            total_amount: quickAmt,
+          },
+        ]);
+        setPaidAmount(quickAmt);
+      } else if (lines.length === 0 && itms.length > 0) {
         addLineWithItem(itms[0]);
       }
     });
