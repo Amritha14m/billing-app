@@ -2,7 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =========================================================================
+   SELAWIK FONT DEFINITIONS (SIL OFL metric-compatible Segoe UI replacement)
+   ========================================================================= */
+@font-face {
+  font-family: 'Selawik';
+  src: url('/fonts/selawkl.woff2') format('woff2'),
+       url('/fonts/selawkl.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Selawik';
+  src: url('/fonts/selawk.woff2') format('woff2'),
+       url('/fonts/selawk.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Selawik';
+  src: url('/fonts/selawksb.woff2') format('woff2'),
+       url('/fonts/selawksb.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Selawik';
+  src: url('/fonts/selawkb.woff2') format('woff2'),
+       url('/fonts/selawkb.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Centralized theme variable for app-wide font family */
+  --app-font-family: 'Segoe UI', 'Selawik', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
 @layer base {
+  html, body, button, input, optgroup, select, textarea, table, th, td, dialog {
+    font-family: var(--app-font-family);
+  }
+
   body {
     @apply bg-[#F8FAFC] text-[#0F172A] antialiased selection:bg-brand-500 selection:text-white min-h-screen;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
@@ -27,6 +75,9 @@
 
 /* Print utilities for A4 and Thermal Invoices */
 @media print {
+  body, table, th, td, div, p, span {
+    font-family: var(--app-font-family) !important;
+  }
   body {
     background: white !important;
     color: black !important;

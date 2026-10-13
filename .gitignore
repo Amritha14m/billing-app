@@ -12,6 +12,25 @@ dist
 dist-ssr
 *.local
 
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+keystore.properties
+*.pem
+*.key
+
+# Android Build Outputs & APKs
+android/app/build
+android/.gradle
+android/build
+.gradle/
+*.apk
+*.aab
+*.zip
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

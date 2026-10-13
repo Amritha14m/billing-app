@@ -33,12 +33,42 @@ function numberToWordsIndian(num) {
   return words + ' Only';
 }
 
-// GSTIN Validator
-function validateGSTIN(gstin) {
+// GSTIN Validator with state-code match check
+function validateGSTIN(gstin, expectedStateCode) {
   if (!gstin) return { isValid: true };
   const clean = gstin.trim().toUpperCase();
   const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-  return { isValid: gstinRegex.test(clean) };
+  if (!gstinRegex.test(clean)) {
+    return { isValid: false, message: 'Invalid GSTIN format' };
+  }
+  if (expectedStateCode) {
+    const padded = expectedStateCode.toString().padStart(2, '0');
+    const gstinPrefix = clean.substring(0, 2);
+    if (gstinPrefix !== padded) {
+      return { isValid: false, message: `GSTIN state code mismatch: ${gstinPrefix} !== ${padded}` };
+    }
+  }
+  return { isValid: true };
+}
+
+// Indian Mobile Number Validator (10 digits starting with 6, 7, 8, or 9)
+function validateIndianPhone(phone) {
+  if (!phone) {
+    return { isValid: false, message: 'Mobile number is required' };
+  }
+  const digits = phone.replace(/\D/g, '');
+  const mobile = digits.length === 12 && digits.startsWith('91') ? digits.substring(2) : digits;
+
+  if (mobile.length !== 10) {
+    return { isValid: false, message: 'Mobile number must be exactly 10 digits' };
+  }
+  if (!/^[6-9]/.test(mobile)) {
+    return { isValid: false, message: 'Indian mobile numbers must start with 6, 7, 8, or 9' };
+  }
+  if (!/^[6-9]\d{9}$/.test(mobile)) {
+    return { isValid: false, message: 'Invalid mobile number format' };
+  }
+  return { isValid: true };
 }
 
 // Line Item Calculator
@@ -331,6 +361,144 @@ assert(inclusiveTest.taxableAmount === 100, 'Taxable amount for 118 inclusive @ 
 assert(inclusiveTest.cgstAmount === 9 && inclusiveTest.sgstAmount === 9, 'CGST + SGST is 9 + 9 = 18');
 assert(inclusiveTest.totalAmount === 118, 'Total amount remains exactly 118');
 
+// ----------------------------------------------------
+// TEST 13: INDIAN MOBILE PHONE VALIDATION
+// ----------------------------------------------------
+console.log('\n[TEST 13: INDIAN MOBILE PHONE VALIDATION]');
+assert(validateIndianPhone('9876543210').isValid === true, '10-digit number starting with 9 should pass');
+assert(validateIndianPhone('+91 8765432109').isValid === true, '+91 with 10 digits starting with 8 should pass');
+assert(validateIndianPhone('7123456789').isValid === true, '10-digit number starting with 7 should pass');
+assert(validateIndianPhone('6123456789').isValid === true, '10-digit number starting with 6 should pass');
+assert(validateIndianPhone('5123456789').isValid === false, 'Mobile starting with 5 should fail');
+assert(validateIndianPhone('123456789').isValid === false, '9-digit number should fail');
+assert(validateIndianPhone('987654321012').isValid === false, '12-digit number without 91 prefix should fail');
+assert(validateIndianPhone('').isValid === false, 'Empty phone number should fail');
+
+// ----------------------------------------------------
+// TEST 14: GSTIN STATE CODE MATCH VALIDATION
+// ----------------------------------------------------
+console.log('\n[TEST 14: GSTIN STATE CODE MATCH VALIDATION]');
+const mhGSTIN = '27AABCA1234F1Z5'; // State 27 (Maharashtra)
+const dlGSTIN = '07AABCA1234F1Z5'; // State 07 (Delhi)
+assert(validateGSTIN(mhGSTIN, '27').isValid === true, 'GSTIN starting with 27 matches state 27');
+assert(validateGSTIN(dlGSTIN, '07').isValid === true, 'GSTIN starting with 07 matches state 07');
+assert(validateGSTIN(mhGSTIN, '07').isValid === false, 'GSTIN starting with 27 rejected when selected state is Delhi (07)');
+assert(validateGSTIN('INVALID123', '27').isValid === false, 'Malformed GSTIN fails even if state code is passed');
+
+// ----------------------------------------------------
+// TEST 15: QUICK BILL CREATION & IDEMPOTENCY
+// ----------------------------------------------------
+console.log('\n[TEST 15: QUICK BILL CREATION & IDEMPOTENCY]');
+function createQuickBill({ invoiceAmount, isGstRegistered, defaultGstRate = 18, isInterState = false }) {
+  const amount = Number(invoiceAmount) || 0;
+  let taxable = amount;
+  let cgst = 0;
+  let sgst = 0;
+  let igst = 0;
+  let totalTax = 0;
+
+  if (isGstRegistered && defaultGstRate > 0) {
+    taxable = round2(amount / (1 + defaultGstRate / 100));
+    totalTax = round2(amount - taxable);
+    if (isInterState) {
+      igst = totalTax;
+    } else {
+      cgst = round2(totalTax / 2);
+      sgst = round2(totalTax - cgst);
+    }
+  }
+
+  return {
+    lineItems: [{
+      name: 'Sale',
+      quantity: 1,
+      unitPrice: taxable,
+      taxRate: isGstRegistered ? defaultGstRate : 0,
+      taxableAmount: taxable,
+      cgstAmount: cgst,
+      sgstAmount: sgst,
+      igstAmount: igst,
+      totalAmount: amount,
+    }],
+    taxableAmount: taxable,
+    cgstAmount: cgst,
+    sgstAmount: sgst,
+    igstAmount: igst,
+    totalTax,
+    totalAmount: amount,
+  };
+}
+
+const quickBillGST = createQuickBill({ invoiceAmount: 1180, isGstRegistered: true, defaultGstRate: 18, isInterState: false });
+assert(quickBillGST.totalAmount === 1180, 'Quick bill total amount is exactly 1180');
+assert(quickBillGST.taxableAmount === 1000, 'Taxable amount is 1000');
+assert(quickBillGST.cgstAmount === 90 && quickBillGST.sgstAmount === 90, 'CGST is 90 and SGST is 90');
+assert(quickBillGST.lineItems[0].name === 'Sale', 'Line item name is "Sale"');
+
+const quickBillNonGST = createQuickBill({ invoiceAmount: 500, isGstRegistered: false });
+assert(quickBillNonGST.totalAmount === 500, 'Non-GST quick bill total is 500');
+assert(quickBillNonGST.totalTax === 0, 'Non-GST quick bill tax is 0');
+assert(quickBillNonGST.taxableAmount === 500, 'Non-GST taxable amount is 500');
+
+// Test Idempotency guard: simulate double tap / duplicate creation
+const billStore = new Map();
+function saveBillIdempotent(billId, billData) {
+  if (billStore.has(billId)) {
+    return { success: false, duplicate: true, record: billStore.get(billId) };
+  }
+  billStore.set(billId, billData);
+  return { success: true, duplicate: false, record: billData };
+}
+const testBillId = 'INV-QB-2026-0001';
+const firstSave = saveBillIdempotent(testBillId, quickBillGST);
+const secondSave = saveBillIdempotent(testBillId, quickBillGST);
+assert(firstSave.success === true && firstSave.duplicate === false, 'First click saves bill successfully');
+assert(secondSave.success === false && secondSave.duplicate === true, 'Double tap detected: duplicate prevented, only 1 bill created');
+assert(billStore.size === 1, 'Only one bill stored in database');
+
+// ----------------------------------------------------
+// TEST 16: PARTY LEDGER RUNNING BALANCES & SUMMARY STRIP
+// ----------------------------------------------------
+console.log('\n[TEST 16: PARTY LEDGER BALANCES & RECONCILIATION]');
+// Party 1: Customer "Ramesh Sharma"
+// Opening: ₹2,000 "You will get" (receivable)
+// Sale Invoice: ₹5,000 (increases receivable to ₹7,000)
+// Payment In ("Payment In"): ₹3,500 (decreases receivable to ₹3,500)
+// Payment Out ("Payment Out"): ₹500 (customer refund/adjustment, increases receivable to ₹4,000)
+let customerBalance = 2000; // to_collect
+customerBalance += 5000; // sale
+customerBalance -= 3500; // "Payment In" (received payment)
+customerBalance += 500;  // "Payment Out" (adjustment/refund)
+assert(customerBalance === 4000, 'Customer net receivable ("You will get") is ₹4,000');
+
+// Party 2: Supplier "Balaji Wholesalers"
+// Opening: ₹10,000 "You will give" (payable)
+// Purchase Bill: ₹25,000 (increases payable to ₹35,000)
+// Payment Out ("Payment Out"): ₹20,000 (decreases payable to ₹15,000)
+let supplierBalance = 10000; // to_pay
+supplierBalance += 25000; // purchase
+supplierBalance -= 20000; // "Payment Out" (paid supplier)
+assert(supplierBalance === 15000, 'Supplier net payable ("You will give") is ₹15,000');
+
+// Summary strip computation
+const parties = [
+  { type: 'customer', balance: customerBalance },
+  { type: 'supplier', balance: supplierBalance },
+];
+let totalYouWillGet = 0;
+let totalYouWillGive = 0;
+parties.forEach(p => {
+  if (p.type === 'customer') {
+    if (p.balance > 0) totalYouWillGet += p.balance;
+    else totalYouWillGive += Math.abs(p.balance);
+  } else if (p.type === 'supplier') {
+    if (p.balance > 0) totalYouWillGive += p.balance;
+    else totalYouWillGet += Math.abs(p.balance);
+  }
+});
+assert(totalYouWillGet === 4000, 'Ledger summary strip "You will get" (receivable) is ₹4,000 (red)');
+assert(totalYouWillGive === 15000, 'Ledger summary strip "You will give" (payable) is ₹15,000 (green)');
+
 console.log('====================================================');
 console.log(`Test Execution Result: ${passed} Passed, ${failed} Failed.`);
 console.log('====================================================');
@@ -338,3 +506,4 @@ console.log('====================================================');
 if (failed > 0) {
   process.exit(1);
 }
+

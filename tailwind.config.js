@@ -1,4 +1,16 @@
 /** @type {import('tailwindcss').Config} */
+// Centralized theme variable for app-wide font family stack
+export const APP_FONT_STACK = [
+  'Segoe UI',
+  'Selawik',
+  'system-ui',
+  '-apple-system',
+  'Roboto',
+  'Helvetica Neue',
+  'Arial',
+  'sans-serif',
+];
+
 export default {
   content: [
     "./index.html",
@@ -31,7 +43,7 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: APP_FONT_STACK,
       },
       boxShadow: {
         'subtle': '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)',
