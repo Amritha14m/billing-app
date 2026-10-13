@@ -11,12 +11,14 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, helperText, leftIcon, rightIcon, className = '', id, ...props }, ref) => {
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const cleanLabel = label ? label.replace(/\s*\*+$/, '') : '';
+    const showRequired = Boolean(props.required || label?.trim().endsWith('*'));
 
     return (
       <div className="w-full">
         {label && (
           <label htmlFor={inputId} className="block text-xs font-semibold text-slate-700 mb-1.5">
-            {label} {props.required && <span className="text-red-500">*</span>}
+            {cleanLabel} {showRequired && <span className="text-red-500">*</span>}
           </label>
         )}
         <div className="relative rounded-lg shadow-sm">

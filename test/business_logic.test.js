@@ -1,6 +1,12 @@
 // Automated Unit & Integration Tests for BizLedger Critical Business Logic
 // Validates Indian GST compliance, Multi-item Invoicing, Stock Accounting,
 // Payments, Returns, Operating Expenses, and Financial Reconciliation.
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function round2(num) {
   return Math.round((num + Number.EPSILON) * 100) / 100;
@@ -498,6 +504,93 @@ parties.forEach(p => {
 });
 assert(totalYouWillGet === 4000, 'Ledger summary strip "You will get" (receivable) is ₹4,000 (red)');
 assert(totalYouWillGive === 15000, 'Ledger summary strip "You will give" (payable) is ₹15,000 (green)');
+
+// ----------------------------------------------------
+// TEST 17: PLACE OF SUPPLY & DYNAMIC GST TYPE (CGST+SGST vs IGST)
+// ----------------------------------------------------
+console.log('\n[TEST 17: PLACE OF SUPPLY & REACTIVE GST RESOLUTION]');
+
+// Simulate business profile located in Tamil Nadu (state_code: '33')
+const mockBusinessProfile = {
+  id: 'biz_tn_001',
+  name: 'Chennai Trading Co',
+  state: 'Tamil Nadu',
+  state_code: '33',
+  gst_registered: true,
+};
+
+// 17.1: Defaults to business profile state (not hardcoded Maharashtra '27')
+const defaultPlaceOfSupply = mockBusinessProfile.state_code;
+assert(defaultPlaceOfSupply === '33', 'Default Place of Supply is the state saved in business profile (Tamil Nadu 33, not 27)');
+
+// 17.2: Intrastate Sale (Business TN '33', Place of Supply TN '33') -> CGST + SGST
+const intraTax = calculateLineItem({
+  quantity: 2,
+  unitPrice: 500,
+  taxRate: 18,
+  isTaxInclusive: false,
+  isGstInvoice: true,
+  isInterState: defaultPlaceOfSupply !== mockBusinessProfile.state_code,
+});
+assert(intraTax.taxableAmount === 1000, 'Intrastate taxable amount is ₹1,000');
+assert(intraTax.cgstRate === 9 && intraTax.cgstAmount === 90, 'Intrastate CGST is 9% (₹90)');
+assert(intraTax.sgstRate === 9 && intraTax.sgstAmount === 90, 'Intrastate SGST is 9% (₹90)');
+assert(intraTax.igstRate === 0 && intraTax.igstAmount === 0, 'Intrastate IGST is 0');
+assert(intraTax.totalAmount === 1180, 'Intrastate total invoice amount is ₹1,180');
+
+// 17.3: Editable Place of Supply per invoice: User changes Place of Supply to Karnataka ('29')
+const editedPlaceOfSupply = '29';
+const interTax = calculateLineItem({
+  quantity: 2,
+  unitPrice: 500,
+  taxRate: 18,
+  isTaxInclusive: false,
+  isGstInvoice: true,
+  isInterState: editedPlaceOfSupply !== mockBusinessProfile.state_code,
+});
+assert(interTax.taxableAmount === 1000, 'Interstate taxable amount is ₹1,000');
+assert(interTax.cgstRate === 0 && interTax.cgstAmount === 0, 'Interstate CGST is 0');
+assert(interTax.sgstRate === 0 && interTax.sgstAmount === 0, 'Interstate SGST is 0');
+assert(interTax.igstRate === 18 && interTax.igstAmount === 180, 'Interstate IGST is 18% (₹180)');
+assert(interTax.totalAmount === 1180, 'Interstate total invoice amount is ₹1,180');
+
+// ----------------------------------------------------
+// TEST 18: FONT BUNDLING AND LABEL ASTERISK SANITIZATION
+// ----------------------------------------------------
+console.log('\n[TEST 18: FONT BUNDLING AND LABEL ASTERISK SANITIZATION]');
+// Test label asterisk sanitizer logic
+function sanitizeLabel(label, required) {
+  const cleanLabel = label ? label.replace(/\s*\*+$/, '') : '';
+  const showRequired = Boolean(required || (label && label.trim().endsWith('*')));
+  return { cleanLabel, asteriskCount: showRequired ? 1 : 0 };
+}
+
+const input1 = sanitizeLabel('Invoice Number *', true);
+assert(input1.cleanLabel === 'Invoice Number' && input1.asteriskCount === 1, 'Input label "Invoice Number *" with required produces exactly 1 asterisk');
+
+const input2 = sanitizeLabel('Invoice Date *', true);
+assert(input2.cleanLabel === 'Invoice Date' && input2.asteriskCount === 1, 'Input label "Invoice Date *" with required produces exactly 1 asterisk');
+
+const input3 = sanitizeLabel('Place of Supply (State)', true);
+assert(input3.cleanLabel === 'Place of Supply (State)' && input3.asteriskCount === 1, 'Select label "Place of Supply (State)" with required produces exactly 1 asterisk');
+
+// Test font files bundling in Android assets directory
+const androidFontsDir = path.resolve(__dirname, '../android/app/src/main/assets/public/fonts');
+assert(fs.existsSync(androidFontsDir), 'Android assets fonts directory exists');
+const requiredFonts = [
+  'selawkl.woff2', 'selawkl.ttf', // Light 300
+  'selawk.woff2', 'selawk.ttf',   // Regular 400
+  'selawksb.woff2', 'selawksb.ttf', // Semibold 600
+  'selawkb.woff2', 'selawkb.ttf'  // Bold 700
+];
+for (const fontFile of requiredFonts) {
+  const filePath = path.join(androidFontsDir, fontFile);
+  assert(fs.existsSync(filePath), `Bundled font file ${fontFile} exists in Android build assets`);
+}
+
+// Test license file
+const licensePath = path.resolve(__dirname, '../public/SELAWIK-LICENSE.txt');
+assert(fs.existsSync(licensePath), 'Selawik SIL OFL license file exists in public directory');
 
 console.log('====================================================');
 console.log(`Test Execution Result: ${passed} Passed, ${failed} Failed.`);

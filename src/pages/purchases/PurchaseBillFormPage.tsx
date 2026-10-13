@@ -281,7 +281,7 @@ export const PurchaseBillFormPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Supplier *
+                Supplier <span className="text-red-500">*</span>
               </label>
               <select
                 className="w-full rounded-lg border border-slate-300 text-sm p-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -304,14 +304,14 @@ export const PurchaseBillFormPage: React.FC = () => {
             </div>
 
             <Input
-              label="Supplier Bill / Invoice # *"
+              label="Supplier Bill / Invoice #"
               value={billNumber}
               onChange={(e) => setBillNumber(e.target.value)}
               required
             />
 
             <Input
-              label="Bill Date *"
+              label="Bill Date"
               type="date"
               value={billDate}
               onChange={(e) => setBillDate(e.target.value)}

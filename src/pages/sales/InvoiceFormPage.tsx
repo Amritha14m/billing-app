@@ -60,13 +60,36 @@ export const InvoiceFormPage: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
 
+  // Helper to resolve business state code from business profile
+  const getBusinessStateCode = (): string => {
+    if (!activeBusiness) return '';
+    if (activeBusiness.state_code) return activeBusiness.state_code;
+    if (activeBusiness.state) {
+      const match = INDIAN_STATES.find(
+        (s) => s.name.toLowerCase() === activeBusiness.state.toLowerCase()
+      );
+      if (match) return match.code;
+    }
+    return '';
+  };
+
+  const businessStateCode = getBusinessStateCode();
+
   // Form Fields
   const [docNumber, setDocNumber] = useState('');
   const [docDate, setDocDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(
     new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]
   );
-  const [placeOfSupply, setPlaceOfSupply] = useState(activeBusiness?.state_code || '27');
+  // Default place of supply to the state saved in the business profile
+  const [placeOfSupply, setPlaceOfSupply] = useState(
+    () =>
+      activeBusiness?.state_code ||
+      INDIAN_STATES.find(
+        (s) => s.name.toLowerCase() === (activeBusiness?.state || '').toLowerCase()
+      )?.code ||
+      ''
+  );
   const [isGst, setIsGst] = useState(activeBusiness?.gst_registered || false);
 
   // Line Items
@@ -84,19 +107,39 @@ export const InvoiceFormPage: React.FC = () => {
   const [newPartyName, setNewPartyName] = useState('');
   const [newPartyPhone, setNewPartyPhone] = useState('');
   const [newPartyGstin, setNewPartyGstin] = useState('');
-  const [newPartyState, setNewPartyState] = useState(activeBusiness?.state_code || '27');
+  const [newPartyState, setNewPartyState] = useState(
+    () =>
+      activeBusiness?.state_code ||
+      INDIAN_STATES.find(
+        (s) => s.name.toLowerCase() === (activeBusiness?.state || '').toLowerCase()
+      )?.code ||
+      '33'
+  );
 
   const [searchParams] = useSearchParams();
 
   // Load existing parties and items
   useEffect(() => {
     if (!activeBusiness) return;
+    const bState = getBusinessStateCode();
+    if (!id && !placeOfSupply && bState) {
+      setPlaceOfSupply(bState);
+    }
+    if (newPartyState === '33' && bState) {
+      setNewPartyState(bState);
+    }
+
     getLocalParties(activeBusiness.id).then((pts) => {
       setParties(pts);
       const paramPartyId = searchParams.get('partyId');
       if (paramPartyId) {
         const p = pts.find((pt) => pt.id === paramPartyId);
-        if (p) setSelectedParty(p);
+        if (p) {
+          setSelectedParty(p);
+          if (p.state_code) {
+            setPlaceOfSupply(p.state_code);
+          }
+        }
       }
     });
 
@@ -104,7 +147,8 @@ export const InvoiceFormPage: React.FC = () => {
       setItems(itms);
       const quickAmt = parseFloat(searchParams.get('quickAmount') || '0');
       if (quickAmt > 0 && lines.length === 0) {
-        const isInter = (selectedParty?.state_code || activeBusiness.state_code) !== activeBusiness.state_code;
+        const activePos = placeOfSupply || bState;
+        const isInter = Boolean(activePos && bState && activePos !== bState);
         const calc = calculateLineItem({
           quantity: 1,
           unitPrice: quickAmt,
@@ -164,7 +208,65 @@ export const InvoiceFormPage: React.FC = () => {
     }
   }, [activeBusiness, id]);
 
-  const isInterState = placeOfSupply !== activeBusiness?.state_code;
+  // GST type strictly follows business state vs place of supply
+  const isInterState = Boolean(
+    placeOfSupply && businessStateCode && placeOfSupply !== businessStateCode
+  );
+
+  // Recalculate existing line items when Place of Supply or GST status changes
+  const recalculateLines = (
+    currentLines: TransactionLine[],
+    interState: boolean,
+    gstActive: boolean
+  ): TransactionLine[] => {
+    return currentLines.map((line) => {
+      const calc = calculateLineItem({
+        quantity: line.quantity,
+        unitPrice: line.unit_price,
+        discountPercent: line.discount_percent,
+        discountAmount: line.discount_amount,
+        taxRate: line.tax_rate,
+        isTaxInclusive: false,
+        isGstInvoice: gstActive,
+        isInterState: interState,
+      });
+
+      return {
+        ...line,
+        taxable_amount: calc.taxableAmount,
+        cgst_rate: calc.cgstRate,
+        cgst_amount: calc.cgstAmount,
+        sgst_rate: calc.sgstRate,
+        sgst_amount: calc.sgstAmount,
+        igst_rate: calc.igstRate,
+        igst_amount: calc.igstAmount,
+        total_amount: calc.totalAmount,
+      };
+    });
+  };
+
+  const handlePlaceOfSupplyChange = (newPos: string) => {
+    setPlaceOfSupply(newPos);
+    const newInterState = Boolean(newPos && businessStateCode && newPos !== businessStateCode);
+    setLines((prev) => recalculateLines(prev, newInterState, isGst));
+  };
+
+  const handleGstToggle = (newGst: boolean) => {
+    setIsGst(newGst);
+    setLines((prev) => recalculateLines(prev, isInterState, newGst));
+  };
+
+  const handleCustomerChange = (partyId: string) => {
+    const p = parties.find((pt) => pt.id === partyId) || null;
+    setSelectedParty(p);
+    // If party has state_code, use it; otherwise default to business profile state
+    const nextPos = p?.state_code || businessStateCode || placeOfSupply;
+    if (nextPos) {
+      setPlaceOfSupply(nextPos);
+      const newInterState = Boolean(nextPos && businessStateCode && nextPos !== businessStateCode);
+      setLines((prev) => recalculateLines(prev, newInterState, isGst));
+    }
+  };
 
   const addLineWithItem = (item: Item) => {
     const calc = calculateLineItem({
@@ -439,7 +541,7 @@ export const InvoiceFormPage: React.FC = () => {
             {/* Customer Selector */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex justify-between items-center">
-                <span>Customer / Billed To *</span>
+                <span>Customer / Billed To <span className="text-red-500">*</span></span>
                 <button
                   type="button"
                   onClick={() => setIsAddPartyOpen(true)}
@@ -451,11 +553,7 @@ export const InvoiceFormPage: React.FC = () => {
               <select
                 className="w-full rounded-lg border border-slate-300 text-sm p-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 value={selectedParty?.id || ''}
-                onChange={(e) => {
-                  const p = parties.find((pt) => pt.id === e.target.value);
-                  setSelectedParty(p || null);
-                  if (p?.state_code) setPlaceOfSupply(p.state_code);
-                }}
+                onChange={(e) => handleCustomerChange(e.target.value)}
               >
                 <option value="">Cash Customer (Walk-in)</option>
                 {parties
@@ -470,7 +568,7 @@ export const InvoiceFormPage: React.FC = () => {
 
             {/* Invoice Number */}
             <Input
-              label="Invoice Number *"
+              label="Invoice Number"
               value={docNumber}
               onChange={(e) => setDocNumber(e.target.value)}
               required
@@ -478,7 +576,7 @@ export const InvoiceFormPage: React.FC = () => {
 
             {/* Invoice Date */}
             <Input
-              label="Invoice Date *"
+              label="Invoice Date"
               type="date"
               value={docDate}
               onChange={(e) => setDocDate(e.target.value)}
@@ -487,9 +585,10 @@ export const InvoiceFormPage: React.FC = () => {
 
             {/* Place of Supply */}
             <Select
-              label="Place of Supply (State) *"
+              label="Place of Supply (State)"
               value={placeOfSupply}
-              onChange={(e) => setPlaceOfSupply(e.target.value)}
+              onChange={(e) => handlePlaceOfSupplyChange(e.target.value)}
+              required
               options={INDIAN_STATES.map((s) => ({
                 value: s.code,
                 label: `${s.code} - ${s.name}`,
@@ -510,7 +609,7 @@ export const InvoiceFormPage: React.FC = () => {
                 type="checkbox"
                 id="isGstCheckbox"
                 checked={isGst}
-                onChange={(e) => setIsGst(e.target.checked)}
+                onChange={(e) => handleGstToggle(e.target.checked)}
                 className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 border-slate-300"
               />
               <label htmlFor="isGstCheckbox" className="text-xs font-semibold text-slate-700 select-none">
@@ -856,7 +955,7 @@ export const InvoiceFormPage: React.FC = () => {
       >
         <div className="space-y-3">
           <Input
-            label="Customer / Business Name *"
+            label="Customer / Business Name"
             value={newPartyName}
             onChange={(e) => setNewPartyName(e.target.value)}
             placeholder="e.g. Ramesh Stores"
@@ -875,9 +974,10 @@ export const InvoiceFormPage: React.FC = () => {
             placeholder="e.g. 27AAAAA0000A1Z5"
           />
           <Select
-            label="State *"
+            label="State"
             value={newPartyState}
             onChange={(e) => setNewPartyState(e.target.value)}
+            required
             options={INDIAN_STATES.map((s) => ({
               value: s.code,
               label: `${s.code} - ${s.name}`,
