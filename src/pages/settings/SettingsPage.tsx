@@ -24,6 +24,7 @@ import { useSync } from '../../context/SyncContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { SUPPORTED_LANGUAGES, LanguageCode } from '../../lib/i18n';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { applyThemeSystemBars } from '../../components/layout/AppShell';
 import {
   getLocalTransactions,
   getLocalParties,
@@ -122,6 +123,7 @@ export const SettingsPage: React.FC = () => {
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
     setTheme(newTheme);
     localStorage.setItem('bizledger_theme', newTheme);
+    applyThemeSystemBars(newTheme);
   };
 
   const handleNegativeStockChange = (val: 'allow' | 'warn' | 'block') => {

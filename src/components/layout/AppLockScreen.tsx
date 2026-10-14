@@ -18,7 +18,15 @@ export const AppLockScreen: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F8FAFC] flex flex-col items-center justify-center p-4 select-none">
+    <div
+      className="fixed inset-0 z-50 bg-[#F8FAFC] flex flex-col items-center justify-center p-4 select-none"
+      style={{
+        paddingTop: 'calc(1.5rem + var(--safe-area-top))',
+        paddingBottom: 'calc(1.5rem + var(--safe-area-bottom))',
+        paddingLeft: 'calc(1rem + var(--safe-area-left))',
+        paddingRight: 'calc(1rem + var(--safe-area-right))',
+      }}
+    >
       <div className="max-w-xs w-full text-center space-y-4">
         <div className="w-16 h-16 rounded-2xl bg-brand-600 text-white flex items-center justify-center mx-auto shadow-lg mb-2">
           <Lock className="w-8 h-8" />

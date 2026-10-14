@@ -7,7 +7,15 @@ export const PrivacyPolicyPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6 max-w-2xl mx-auto">
+    <div
+      className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6 max-w-2xl mx-auto"
+      style={{
+        paddingTop: 'calc(1.5rem + var(--safe-area-top))',
+        paddingBottom: 'calc(1.5rem + var(--safe-area-bottom))',
+        paddingLeft: 'calc(1rem + var(--safe-area-left))',
+        paddingRight: 'calc(1rem + var(--safe-area-right))',
+      }}
+    >
       <div className="flex items-center gap-3 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-4 h-4" />

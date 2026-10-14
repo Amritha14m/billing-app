@@ -329,7 +329,7 @@ export const PartyDetailPage: React.FC<PartyDetailPageProps> = ({
   const isPositiveBalance = currentBalance > 0;
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto pb-24">
+    <div className="space-y-4 max-w-4xl mx-auto" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
       {/* 1. TOP HEADER & PROFILE */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/90 shadow-subtle space-y-4">
         <div className="flex items-center justify-between">
@@ -535,7 +535,14 @@ export const PartyDetailPage: React.FC<PartyDetailPageProps> = ({
       </Card>
 
       {/* 3. STICKY BOTTOM ACTION BAR: PAYMENT OUT (RED) & PAYMENT IN (GREEN) */}
-      <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 z-30 shadow-2xl">
+      <div
+        className="fixed bottom-0 left-0 right-0 lg:left-64 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 pt-3 z-30 shadow-2xl hide-on-keyboard transition-all"
+        style={{
+          paddingBottom: 'calc(0.75rem + var(--safe-area-bottom))',
+          paddingLeft: 'calc(0.75rem + var(--safe-area-left))',
+          paddingRight: 'calc(0.75rem + var(--safe-area-right))',
+        }}
+      >
         <div className="max-w-4xl mx-auto grid grid-cols-2 gap-3">
           {/* Payment Out Button (Red) */}
           <button

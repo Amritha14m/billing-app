@@ -153,7 +153,15 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center items-center p-4 sm:p-6">
+    <div
+      className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center items-center p-4 sm:p-6"
+      style={{
+        paddingTop: 'calc(1.5rem + var(--safe-area-top))',
+        paddingBottom: 'calc(1.5rem + var(--safe-area-bottom))',
+        paddingLeft: 'calc(1rem + var(--safe-area-left))',
+        paddingRight: 'calc(1rem + var(--safe-area-right))',
+      }}
+    >
       <div className="max-w-md w-full">
         {/* Brand header */}
         <div className="text-center mb-6">

@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SyncProvider } from './context/SyncContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { AppLockScreen } from './components/layout/AppLockScreen';
+import { AppShell } from './components/layout/AppShell';
 
 // Onboarding Pages
 import { LanguageSelectScreen } from './pages/onboarding/LanguageSelectScreen';
@@ -100,7 +101,9 @@ export function App() {
       <AuthProvider>
         <SyncProvider>
           <HashRouter>
-            <AppRoutes />
+            <AppShell>
+              <AppRoutes />
+            </AppShell>
           </HashRouter>
         </SyncProvider>
       </AuthProvider>

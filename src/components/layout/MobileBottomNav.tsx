@@ -21,7 +21,14 @@ export const MobileBottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-1.5 py-1 z-40 shadow-lg select-none">
+    <nav
+      className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-1.5 pt-1 z-40 shadow-lg select-none hide-on-keyboard transition-all"
+      style={{
+        paddingBottom: 'calc(0.25rem + var(--safe-area-bottom))',
+        paddingLeft: 'calc(0.375rem + var(--safe-area-left))',
+        paddingRight: 'calc(0.375rem + var(--safe-area-right))',
+      }}
+    >
       <div className="grid grid-cols-5 items-center">
         {navItems.map((item) => {
           const Icon = item.icon;

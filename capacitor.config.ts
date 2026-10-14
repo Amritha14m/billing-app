@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'com.bizledger.app',
@@ -7,6 +8,15 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     cleartext: true
+  },
+  plugins: {
+    Keyboard: {
+      resize: KeyboardResize.Body,
+      resizeOnFullScreen: true
+    },
+    StatusBar: {
+      overlaysWebView: true
+    }
   }
 };
 

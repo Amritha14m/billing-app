@@ -492,7 +492,10 @@ export const PartyListPage: React.FC = () => {
       )}
 
       {/* 5. FLOATING ACTION BUTTON (FAB) */}
-      <div className="fixed bottom-16 sm:bottom-8 right-6 z-30">
+      <div
+        className="fixed sm:bottom-8 right-6 z-30 hide-on-keyboard transition-all"
+        style={{ bottom: 'calc(4.5rem + var(--safe-area-bottom))' }}
+      >
         <button
           type="button"
           onClick={() => openAddModal(activeTab)}

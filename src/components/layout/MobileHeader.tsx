@@ -54,8 +54,16 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ onOpenBarcodeScanner
 
   return (
     <>
-      <header className="lg:hidden h-14 bg-brand-600 text-white px-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
-        {/* Left: Business Icon & Editable Company Name */}
+      <header
+        className="lg:hidden bg-brand-600 text-white px-3 sticky top-0 z-30 shadow-md transition-all select-none"
+        style={{
+          paddingTop: 'var(--safe-area-top)',
+          paddingLeft: 'calc(0.75rem + var(--safe-area-left))',
+          paddingRight: 'calc(0.75rem + var(--safe-area-right))',
+        }}
+      >
+        <div className="h-14 flex items-center justify-between">
+          {/* Left: Business Icon & Editable Company Name */}
         <div className="flex items-center gap-2 overflow-hidden max-w-[65%]">
           {/* Business Switcher Trigger */}
           <button
@@ -134,6 +142,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ onOpenBarcodeScanner
           >
             <Settings className="w-4 h-4" />
           </button>
+        </div>
         </div>
       </header>
 

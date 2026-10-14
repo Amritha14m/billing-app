@@ -55,9 +55,12 @@ export const Modal: React.FC<ModalProps> = ({
           onClick={onClose}
         />
 
-        {/* Modal dialog box */}
+        {/* Modal dialog box / bottom sheet */}
         <div
           className={`relative transform overflow-hidden rounded-t-2xl sm:rounded-2xl bg-white text-left shadow-2xl transition-all w-full ${maxWidthClasses[effectiveMaxWidth]} my-0 sm:my-8 max-h-[90vh] flex flex-col z-10`}
+          style={{
+            paddingBottom: 'var(--safe-area-bottom)',
+          }}
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">

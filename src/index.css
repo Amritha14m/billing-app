@@ -44,6 +44,52 @@
 :root {
   /* Centralized theme variable for app-wide font family */
   --app-font-family: 'Segoe UI', 'Selawik', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Native Android fallback variables (injected by MainActivity.java) */
+  --safe-top: 0px;
+  --safe-bottom: 0px;
+  --safe-left: 0px;
+  --safe-right: 0px;
+  --keyboard-height: 0px;
+
+  /* Computed Safe Area Insets (env() first, fallback to native --safe-*) */
+  --safe-area-top: max(env(safe-area-inset-top, 0px), var(--safe-top, 0px));
+  --safe-area-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, 0px));
+  --safe-area-left: max(env(safe-area-inset-left, 0px), var(--safe-left, 0px));
+  --safe-area-right: max(env(safe-area-inset-right, 0px), var(--safe-right, 0px));
+
+  /* Bottom Navigation Bar height + safe area bottom */
+  --mobile-nav-height: 52px;
+  --mobile-nav-total: calc(var(--mobile-nav-height) + var(--safe-area-bottom));
+}
+
+/* Safe area padding utilities */
+.safe-pt {
+  padding-top: var(--safe-area-top);
+}
+.safe-pb {
+  padding-bottom: var(--safe-area-bottom);
+}
+.safe-pl {
+  padding-left: var(--safe-area-left);
+}
+.safe-pr {
+  padding-right: var(--safe-area-right);
+}
+
+/* Hide bottom navigation bar when on-screen keyboard is open */
+body.keyboard-open .hide-on-keyboard {
+  display: none !important;
+}
+
+/* Main scroll area bottom padding (nav height + safe bottom on mobile, standard on desktop) */
+.app-main-content {
+  padding-bottom: calc(5.5rem + var(--safe-area-bottom));
+}
+@media (min-width: 1024px) {
+  .app-main-content {
+    padding-bottom: 2rem !important;
+  }
 }
 
 @layer base {

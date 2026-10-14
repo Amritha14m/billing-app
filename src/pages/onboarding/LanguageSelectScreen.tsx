@@ -21,7 +21,15 @@ export const LanguageSelectScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-between p-4 sm:p-6 max-w-lg mx-auto">
+    <div
+      className="min-h-screen bg-[#F8FAFC] flex flex-col justify-between p-4 sm:p-6 max-w-lg mx-auto"
+      style={{
+        paddingTop: 'calc(1rem + var(--safe-area-top))',
+        paddingBottom: 'calc(1.5rem + var(--safe-area-bottom))',
+        paddingLeft: 'calc(1rem + var(--safe-area-left))',
+        paddingRight: 'calc(1rem + var(--safe-area-right))',
+      }}
+    >
       {/* Header */}
       <div className="pt-6 sm:pt-10 text-center">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-600 text-white font-black text-2xl shadow-lg mb-3">
